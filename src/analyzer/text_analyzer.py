@@ -1,41 +1,43 @@
 """
 テキスト解析モジュール
 """
-from janome.tokenizer import Tokenizer
-from typing import Dict, List, Any, Tuple, Set
-import pandas as pd
-import re
 import time
-from enum import Enum
-
-
-class SentimentType(Enum):
-    """感情極性の種類を表す列挙型"""
-    POSITIVE = "positive"
-    NEGATIVE = "negative"
-    NEUTRAL = "neutral"
+import pandas as pd
+from typing import Dict, List, Set, Tuple, Any, Optional
+import re
+import statistics
+from janome.tokenizer import Tokenizer
+from janome.analyzer import Analyzer
+from janome.charfilter import RegexReplaceCharFilter
+from janome.tokenfilter import POSKeepFilter, ExtractAttributeFilter
 
 
 class TextAnalyzer:
-    """テキスト解析を担当するクラス"""
+    """レビューテキストの解析を担当するクラス"""
     
     def __init__(self, config: Dict[str, Any]):
         """
         初期化
         
         Args:
-            config (Dict[str, Any]): 設定の辞書（カテゴリー、感情表現、否定表現など）
+            config (Dict[str, Any]): 設定情報
         """
         self.categories = config['categories']
-        self.sentiment_words = config['sentiment_words']
-        self.negation_patterns = config['negation_patterns']
-        self.category_weights = config['category_weights']
+        self.category_weights = config.get('category_weights', {})
+        
+        # Janomeのトークナイザとアナライザを初期化
         self.tokenizer = Tokenizer()
+        char_filters = [
+            RegexReplaceCharFilter(r'[(\)「」『』【】、。?？!！]', ' ')
+        ]
+        token_filters = [
+            POSKeepFilter(['名詞', '動詞', '形容詞', '副詞']),
+            ExtractAttributeFilter('surface')
+        ]
+        self.analyzer = Analyzer(char_filters=char_filters, tokenizer=self.tokenizer, token_filters=token_filters)
         
-        # 感情判定のしきい値
-        self.sentiment_threshold = 0.1
-        
-        # キーワードのキャッシュを作成
+        # キーワードマッチングのキャッシュ
+        self.keyword_cache = {}
         self._prepare_keyword_cache()
         
     def _prepare_keyword_cache(self):
@@ -73,10 +75,8 @@ class TextAnalyzer:
             category_results[category_key] = {
                 'name': category_data['name'],
                 'comment_count': 0,
-                'positive_count': 0,  # ポジティブコメント数
-                'negative_count': 0,  # ネガティブコメント数
-                'neutral_count': 0,   # ニュートラルコメント数
                 'satisfaction_score': 0,
+                'average_score': 0,  # 平均点数を格納する項目を追加
                 'subcategories': {},
                 'comments': []  # カテゴリ全体のコメントリスト
             }
@@ -86,10 +86,8 @@ class TextAnalyzer:
                     category_results[category_key]['subcategories'][subcategory_key] = {
                         'name': subcategory_data['name'],
                         'comment_count': 0,
-                        'positive_count': 0,  # ポジティブコメント数
-                        'negative_count': 0,  # ネガティブコメント数
-                        'neutral_count': 0,   # ニュートラルコメント数
                         'satisfaction_score': 0,
+                        'average_score': 0,  # 平均点数を格納する項目を追加
                         'comments': []  # サブカテゴリのコメントリスト
                     }
         
@@ -121,10 +119,6 @@ class TextAnalyzer:
                 # レビューテキストを解析し、対応するカテゴリを特定
                 matched_categories = self._categorize_review(content)
                 
-                # 感情スコアの計算と極性の判定
-                sentiment_score = self._calculate_sentiment_score(content)
-                sentiment_type = self._determine_sentiment_type(sentiment_score)
-                
                 # 各カテゴリの統計を更新
                 for category_key, subcategories in matched_categories.items():
                     if category_key in category_results:
@@ -132,19 +126,15 @@ class TextAnalyzer:
                         weight = self.category_weights.get(category_key, 1.0)
                         
                         # 重み付けされたスコア
-                        weighted_score = score * weight + sentiment_score
+                        weighted_score = score * weight
                         
                         category_results[category_key]['comment_count'] += 1
                         category_results[category_key]['satisfaction_score'] += weighted_score
-                        category_results[category_key]['comments'].append(content)  # コメントを追加
-                        
-                        # 極性に基づいてカウントを増やす
-                        if sentiment_type == SentimentType.POSITIVE:
-                            category_results[category_key]['positive_count'] += 1
-                        elif sentiment_type == SentimentType.NEGATIVE:
-                            category_results[category_key]['negative_count'] += 1
-                        else:
-                            category_results[category_key]['neutral_count'] += 1
+                        # コメントを辞書として追加し、点数情報を含める
+                        category_results[category_key]['comments'].append({
+                            'text': content,
+                            'score': score
+                        })
                         
                         # サブカテゴリの統計を更新
                         for subcategory_key in subcategories:
@@ -153,15 +143,11 @@ class TextAnalyzer:
                                 
                                 subcategory['comment_count'] += 1
                                 subcategory['satisfaction_score'] += weighted_score
-                                subcategory['comments'].append(content)  # コメントを追加
-                                
-                                # 極性に基づいてカウントを増やす
-                                if sentiment_type == SentimentType.POSITIVE:
-                                    subcategory['positive_count'] += 1
-                                elif sentiment_type == SentimentType.NEGATIVE:
-                                    subcategory['negative_count'] += 1
-                                else:
-                                    subcategory['neutral_count'] += 1
+                                # コメントを辞書として追加し、点数情報を含める
+                                subcategory['comments'].append({
+                                    'text': content,
+                                    'score': score
+                                })
                 
                 # 進捗状況の更新
                 processed_reviews += 1
@@ -180,19 +166,28 @@ class TextAnalyzer:
                 print(f"レビュー解析中にエラーが発生しました: {e}")
                 continue
         
-        # 平均満足度スコアを計算
+        # 平均点数を計算
         for category_key, category_data in category_results.items():
             if category_data['comment_count'] > 0:
-                category_data['satisfaction_score'] /= category_data['comment_count']
-            else:
-                category_data['satisfaction_score'] = 0
+                # 満足度スコアの正規化
+                category_data['satisfaction_score'] = category_data['satisfaction_score'] / category_data['comment_count']
                 
-            if 'subcategories' in category_data:
-                for subcategory_key, subcategory_data in category_data['subcategories'].items():
-                    if subcategory_data['comment_count'] > 0:
-                        subcategory_data['satisfaction_score'] /= subcategory_data['comment_count']
-                    else:
-                        subcategory_data['satisfaction_score'] = 0
+                # 平均点数の計算（コメントから直接計算）
+                scores = [comment_data['score'] for comment_data in category_data['comments']]
+                if scores:
+                    category_data['average_score'] = sum(scores) / len(scores)
+                
+                # サブカテゴリの平均点数を計算
+                if 'subcategories' in category_data:
+                    for subcategory_key, subcategory_data in category_data['subcategories'].items():
+                        if subcategory_data['comment_count'] > 0:
+                            # 満足度スコアの正規化
+                            subcategory_data['satisfaction_score'] = subcategory_data['satisfaction_score'] / subcategory_data['comment_count']
+                            
+                            # 平均点数の計算（コメントから直接計算）
+                            subcategory_scores = [comment_data['score'] for comment_data in subcategory_data['comments']]
+                            if subcategory_scores:
+                                subcategory_data['average_score'] = sum(subcategory_scores) / len(subcategory_scores)
         
         # 処理時間の表示
         total_time = time.time() - start_time
@@ -262,52 +257,4 @@ class TextAnalyzer:
                 if keyword in token_surfaces:
                     return True
         
-        return False
-    
-    def _calculate_sentiment_score(self, content: str) -> float:
-        """
-        テキストの感情スコアを計算する
-        
-        Args:
-            content (str): レビューテキスト
-        
-        Returns:
-            float: 感情スコア（正の値は肯定的、負の値は否定的）
-        """
-        score = 0.0
-        
-        # 否定表現の検出
-        has_negation = any(pattern in content for pattern in self.negation_patterns)
-        
-        # ポジティブワードの検出
-        positive_matches = [word for word in self.sentiment_words.get('positive', []) if word in content]
-        
-        # ネガティブワードの検出
-        negative_matches = [word for word in self.sentiment_words.get('negative', []) if word in content]
-        
-        # 否定表現がある場合、ポジティブとネガティブを反転
-        if has_negation:
-            score -= len(positive_matches) * 0.2
-            score += len(negative_matches) * 0.1
-        else:
-            score += len(positive_matches) * 0.2
-            score -= len(negative_matches) * 0.2
-        
-        return score
-    
-    def _determine_sentiment_type(self, sentiment_score: float) -> SentimentType:
-        """
-        感情スコアに基づいて感情極性を判定する
-        
-        Args:
-            sentiment_score (float): 感情スコア
-        
-        Returns:
-            SentimentType: 感情極性（ポジティブ/ネガティブ/ニュートラル）
-        """
-        if sentiment_score > self.sentiment_threshold:
-            return SentimentType.POSITIVE
-        elif sentiment_score < -self.sentiment_threshold:
-            return SentimentType.NEGATIVE
-        else:
-            return SentimentType.NEUTRAL 
+        return False 

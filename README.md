@@ -4,17 +4,24 @@
 
 ## 機能
 
-- TSVファイル形式のレビューデータを読み込み
+- TSVファイル形式のレビューデータを読み込み（テキストおよび点数）
 - Janomeライブラリを使用した日本語テキスト解析
-- カテゴリごとのコメント件数とユーザー満足度スコアの集計
-- 結果の標準出力とCSV形式でのファイル出力
+- カテゴリごとのコメント件数、平均点数、ユーザー満足度スコアの集計
+- 結果の標準出力とCSV形式でのファイル出力（Shift-JISエンコーディング）
+- サブカテゴリごとのコメント一覧をTSV形式で出力
 
 ## 動作フロー
 
 1. input_data.tsvファイルをpandasフレームワークで読み込む
+   - 1列目: ID
+   - 2列目: 日付
+   - 3列目: レビュー投稿者
+   - 4列目: レビューテキスト
+   - 5列目: ストアレビューの点数（星の数）
 2. input_data.tsvの4列目（content）がストアレビューのテキストなので、それに対してjanomeでテキスト解析を行う
-3. config/categories.yamlに記載されている情報を参照し、カテゴリ別に「コメント件数」「ユーザー満足度スコア」を標準出力する
-4. 出力結果はoutput/result.csvとしてCSV形式でファイル出力する
+3. config/categories.yamlに記載されている情報を参照し、カテゴリ別に「コメント件数」「平均点数」「ユーザー満足度スコア」を標準出力する
+4. 出力結果はoutput/result.csv（Shift-JIS）としてCSV形式でファイル出力する
+5. カテゴリとサブカテゴリごとのコメント一覧をoutput/comment_list.tsv（UTF-8）としてTSV形式で出力する
 
 ## インストール
 
@@ -22,6 +29,12 @@
 
 ```
 pip install pandas janome pyyaml
+```
+
+または以下のコマンドでuv（高速Pythonパッケージマネージャー）を使用してインストールできます：
+
+```
+uv pip install pandas janome pyyaml
 ```
 
 ## 使用方法
@@ -32,6 +45,12 @@ pip install pandas janome pyyaml
 python run_analyzer.py
 ```
 
+または、uvを使用する場合：
+
+```
+uv run run_analyzer.py
+```
+
 ## プロジェクト構造
 
 ```
@@ -40,7 +59,8 @@ python run_analyzer.py
 │   └── categories.yaml       # カテゴリ定義ファイル
 ├── input_data.tsv            # 入力データファイル
 ├── output/                   # 出力ディレクトリ
-│   └── result.csv            # 解析結果出力ファイル
+│   ├── result.csv            # 解析結果出力ファイル（Shift-JIS）
+│   └── comment_list.tsv      # コメント一覧ファイル（UTF-8）
 ├── src/                      # ソースコード
 │   ├── analyzer/             # テキスト解析モジュール
 │   │   ├── __init__.py
@@ -57,6 +77,21 @@ python run_analyzer.py
 ├── pyproject.toml            # プロジェクト設定ファイル
 └── README.md                 # このファイル
 ```
+
+## 出力ファイル形式
+
+### result.csv（Shift-JIS）
+- カテゴリ: カテゴリ名
+- サブカテゴリ: サブカテゴリ名（カテゴリの集計行は「合計」）
+- コメント件数: 該当するコメントの数
+- 平均点数: 該当するコメントの平均ストア評価点数（1〜5）
+- ユーザー満足度スコア: 計算されたユーザー満足度スコア
+
+### comment_list.tsv（UTF-8）
+- カテゴリ: カテゴリ名
+- サブカテゴリ: サブカテゴリ名
+- ストア点数: レビューのストア評価点数（1〜5）
+- コメント: レビューのテキスト内容
 
 ## 技術スタック
 

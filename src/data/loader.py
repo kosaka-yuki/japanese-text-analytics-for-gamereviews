@@ -32,15 +32,19 @@ class DataLoader:
         if not os.path.exists(self.input_file):
             raise FileNotFoundError(f"入力ファイルが見つかりません: {self.input_file}")
         
-        # TSVファイルを読み込む
-        df = pd.read_csv(self.input_file, sep='\t')
+        # TSVファイルを読み込む（ヘッダーなしを想定、5列目が点数）
+        df = pd.read_csv(self.input_file, sep='\t', header=None)
         
-        # 列名を確認し、'content'と'score'列があるか確認
-        required_columns = ['content', 'score']
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        # 最低5列あるか確認
+        if df.shape[1] < 5:
+            raise ValueError(f"入力ファイルの列数が不足しています：{df.shape[1]}列（最低5列必要）")
         
-        if missing_columns:
-            raise ValueError(f"入力ファイルに必要な列がありません: {', '.join(missing_columns)}")
+        # 列名を設定
+        column_names = ['id', 'date', 'author', 'content', 'score']
+        df.columns = column_names + list(df.columns[5:])  # 5列目以降があれば追加
+        
+        # scoreを数値型に変換（失敗したら欠損値に）
+        df['score'] = pd.to_numeric(df['score'], errors='coerce')
         
         return df
     
