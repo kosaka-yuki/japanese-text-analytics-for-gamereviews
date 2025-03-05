@@ -53,5 +53,4 @@ htmlcov/
 .venv
 
 uv.lock
-memo.md
 input_data.tsv
