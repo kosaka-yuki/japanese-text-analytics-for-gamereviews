@@ -38,6 +38,9 @@ def main():
         output_formatter.print_results(results)
         output_formatter.export_to_csv(results)
         
+        # コメント一覧をTSVファイルに出力
+        output_formatter.export_comment_list_to_tsv(results)
+        
         print("解析が完了しました。")
         return 0
         

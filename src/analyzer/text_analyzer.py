@@ -63,7 +63,8 @@ class TextAnalyzer:
                 'name': category_data['name'],
                 'comment_count': 0,
                 'satisfaction_score': 0,
-                'subcategories': {}
+                'subcategories': {},
+                'comments': []  # カテゴリ全体のコメントリスト
             }
             
             if 'subcategories' in category_data:
@@ -72,6 +73,7 @@ class TextAnalyzer:
                         'name': subcategory_data['name'],
                         'comment_count': 0,
                         'satisfaction_score': 0,
+                        'comments': []  # サブカテゴリのコメントリスト
                     }
         
         # 処理の進捗を表示するための変数
@@ -116,12 +118,14 @@ class TextAnalyzer:
                         
                         category_results[category_key]['comment_count'] += 1
                         category_results[category_key]['satisfaction_score'] += weighted_score
+                        category_results[category_key]['comments'].append(content)  # コメントを追加
                         
                         # サブカテゴリの統計を更新
                         for subcategory_key in subcategories:
                             if 'subcategories' in category_results[category_key] and subcategory_key in category_results[category_key]['subcategories']:
                                 category_results[category_key]['subcategories'][subcategory_key]['comment_count'] += 1
                                 category_results[category_key]['subcategories'][subcategory_key]['satisfaction_score'] += weighted_score
+                                category_results[category_key]['subcategories'][subcategory_key]['comments'].append(content)  # コメントを追加
                 
                 # 進捗状況の更新
                 processed_reviews += 1

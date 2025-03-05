@@ -17,6 +17,7 @@ class OutputFormatter:
             output_file (str): 出力CSVファイルのパス
         """
         self.output_file = output_file
+        self.comment_list_file = "output/comment_list.tsv"
         
     def print_results(self, results: Dict[str, Dict[str, Any]]) -> None:
         """
@@ -98,4 +99,37 @@ class OutputFormatter:
                                 f"{subcategory_satisfaction_score:.2f}"
                             ])
         
-        print(f"\nCSVファイルに結果を出力しました: {self.output_file}") 
+        print(f"\nCSVファイルに結果を出力しました: {self.output_file}")
+        
+    def export_comment_list_to_tsv(self, results: Dict[str, Dict[str, Any]]) -> None:
+        """
+        カテゴリとサブカテゴリごとのコメント一覧をTSVファイルに出力する
+        
+        Args:
+            results (Dict[str, Dict[str, Any]]): カテゴリごとの分析結果
+        """
+        # 出力ディレクトリが存在しなければ作成
+        os.makedirs(os.path.dirname(self.comment_list_file), exist_ok=True)
+        
+        # TSV形式でコメント一覧を出力
+        with open(self.comment_list_file, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f, delimiter='\t')
+            
+            # ヘッダー行を書き込む
+            writer.writerow(['カテゴリ', 'サブカテゴリ', 'コメント'])
+            
+            # カテゴリとサブカテゴリごとのコメントを書き込む
+            for category_key, category_data in results.items():
+                category_name = category_data['name']
+                
+                if 'subcategories' in category_data:
+                    for subcategory_key, subcategory_data in category_data['subcategories'].items():
+                        subcategory_name = subcategory_data['name']
+                        
+                        if 'comments' in subcategory_data and subcategory_data['comments']:
+                            for comment in subcategory_data['comments']:
+                                # コメントの改行を取り除く
+                                comment_text = comment.replace('\n', ' ').replace('\r', '')
+                                writer.writerow([category_name, subcategory_name, comment_text])
+        
+        print(f"TSVファイルにコメント一覧を出力しました: {self.comment_list_file}") 
