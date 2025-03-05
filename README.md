@@ -1,5 +1,8 @@
 # ゲームストアレビュー テキスト解析ツール
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
 このプロジェクトは、ゲームのストアレビューを日本語テキスト解析し、ゲーム運営に有効な形で情報を抽出するツールです。
 
 ## 機能
@@ -31,12 +34,6 @@
 pip install pandas janome pyyaml
 ```
 
-または以下のコマンドでuv（高速Pythonパッケージマネージャー）を使用してインストールできます：
-
-```
-uv pip install pandas janome pyyaml
-```
-
 ## 使用方法
 
 以下のコマンドでツールを実行します。
@@ -45,11 +42,21 @@ uv pip install pandas janome pyyaml
 python run_analyzer.py
 ```
 
-または、uvを使用する場合：
+
+### サンプルデータの利用
+
+プロジェクトにはサンプルデータが含まれています。以下の手順でサンプルデータを使用できます：
 
 ```
-uv run run_analyzer.py
+# サンプル設定ファイルをコピー
+cp example/config/categories_sample.yaml config/categories.yaml
+# サンプル入力データをコピー
+cp example/input_data_sample.tsv input_data.tsv
+# 解析を実行
+python run_analyzer.py
 ```
+
+詳細な情報は `example/README.md` を参照してください。
 
 ## プロジェクト構造
 
@@ -57,6 +64,11 @@ uv run run_analyzer.py
 .
 ├── config/                   # 設定ファイル
 │   └── categories.yaml       # カテゴリ定義ファイル
+├── example/                  # サンプルデータディレクトリ
+│   ├── config/               # サンプル設定ファイル
+│   │   └── categories_sample.yaml  # サンプルカテゴリ定義
+│   ├── input_data_sample.tsv # サンプル入力データ
+│   └── README.md             # サンプルデータの説明
 ├── input_data.tsv            # 入力データファイル
 ├── output/                   # 出力ディレクトリ
 │   ├── result.csv            # 解析結果出力ファイル（Shift-JIS）
@@ -75,6 +87,7 @@ uv run run_analyzer.py
 │   └── main.py               # メイン実行スクリプト
 ├── run_analyzer.py           # 実行スクリプト
 ├── pyproject.toml            # プロジェクト設定ファイル
+├── LICENSE                   # MITライセンスファイル
 └── README.md                 # このファイル
 ```
 
@@ -99,3 +112,7 @@ uv run run_analyzer.py
 - pandas: データフレーム処理
 - janome: 日本語テキスト形態素解析
 - pyyaml: YAML設定ファイル読み込み
+
+## ライセンス
+
+このプロジェクトは[MITライセンス](LICENSE)のもとで公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。

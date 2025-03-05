@@ -1,0 +1,96 @@
+## ゲームストアレビューカテゴリー定義ファイル（サンプル）
+
+# ゲームカテゴリー定義
+game_review_categories:
+  # ゲームメカニクス
+  game_mechanics:
+    name: ゲームメカニクス
+    subcategories:
+      core_gameplay:
+        name: コアゲームプレイ
+        keywords:
+          - 単語: 
+            - ゲームプレイ
+            - 操作性
+            - バトル
+            - 戦闘
+            - 難易度
+          - 複合語:
+            - 操作 感
+            - 戦闘 システム
+          - フレーズ:
+            - 遊び やすい
+            - 楽しい ゲーム
+            - 難しい ゲーム
+      progression:
+        name: プログレッション
+        keywords:
+          - 単語:
+            - レベル
+            - 育成
+            - 成長
+            - 進化
+          - 複合語:
+            - キャラ 育成
+            - 成長 システム
+
+  # ビジネスモデル
+  business_model:
+    name: ビジネスモデル
+    subcategories:
+      gacha:
+        name: ガチャ
+        keywords:
+          - 単語:
+            - ガチャ
+            - 確率
+            - 排出
+            - 石
+          - 複合語:
+            - ガチャ 確率
+            - 排出 率
+      payment:
+        name: 課金システム
+        keywords:
+          - 単語:
+            - 課金
+            - 有償
+            - 無償
+            - 価格
+          - 複合語:
+            - 課金 アイテム
+            - 価格 設定
+
+# 感情表現単語リスト
+sentiment_words:
+  positive:
+    - 良い
+    - いい
+    - 素晴らしい
+    - 楽しい
+    - 面白い
+    - すごい
+    - 最高
+    - 美しい
+    - 快適
+  negative:
+    - 悪い
+    - 最悪
+    - つまらない
+    - 難しい
+    - バグ
+    - 重い
+    - 遅い
+    - 不具合
+    - 不満
+
+# 否定表現パターン
+negation_patterns:
+  - ない
+  - ません
+  - なかった
+
+# カテゴリ重み付け係数
+category_weights:
+  game_mechanics: 1.2
+  business_model: 0.8 
